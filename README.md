@@ -1,8 +1,13 @@
-# AIAA 4220 - Homework 3: Social Navigation with Habitat Simulator
+# AIAA 4220 - Homework 3: Social Navigation with 3D Simulator
 
-This is the homework 3 for AIAA 4220. We will perform a **social navigation task** on the Habitat platform.
+[![Web](https://img.shields.io/badge/Web-Falcon-blue)](https://zeying-gong.github.io/projects/falcon/)
+[![Paper](https://img.shields.io/badge/ICRA-2025-red)](https://ieeexplore.ieee.org/abstract/document/11127910/)
+[![EvalAI](https://img.shields.io/badge/Submit-EvalAI-green)](https://eval.ai/web/challenges/challenge-page/2557/overview)
+[![License](https://img.shields.io/badge/License-Apache%202.0-yellow)](LICENSE)
 
-This assignment challenges students to develop advanced **RGBD-based perception and navigation systems** for autonomous agents operating in **dynamic, human-populated indoor environments**. The goal is to create agents that **navigate efficiently** while adhering to **social norms**—avoiding collisions and respecting personal space.
+This is the homework 3 for AIAA 4220. We will perform a **social navigation task** on the Habitat simulator.
+
+The assignment challenges students to develop advanced **RGBD-based perception and navigation systems** for autonomous agents operating in **dynamic, human-populated indoor environments**. The goal is to create agents that **navigate efficiently** while adhering to **social norms**—avoiding collisions and respecting personal space.
 
 ## 📋 Table of Contents
 
@@ -55,9 +60,9 @@ This homework uses the subset of the **Social-HM3D** benchmark and provides:
    python -m habitat_sim.utils.datasets_download --username <api-token-id> --password <api-token-secret> --uids hm3d
    ```
 
-2. **Download Episode Datasets**
+2. **Download Task Datasets**
 
-   Download social navigation episodes for evaluations: [Hugging Face Dataset](https://huggingface.co/datasets/robosense/datasets/tree/main/track2-social-navigation)
+   Download social navigation episodes for evaluations in [HuggingFace Page](https://huggingface.co/datasets/zgong313/aiaa4220-social-nav-dataset)
 
    ```bash
    # After downloading, unzip and place in the default location
@@ -176,6 +181,8 @@ sh habitat-baselines/habitat_baselines/rl/ddppo/single_node_falcon.sh
 sh habitat-baselines/habitat_baselines/rl/ddppo/single_node_falcon_mini.sh
 ```
 
+You can also finetune from the pretrain weights, which can be found in this [link](https://drive.google.com/drive/folders/1Bx1L9U345P_9pUfADk3Tnj7uK01EpxZY?usp=sharing). Download it to the root directory. Remember to set `habitat_baselines.rl.ddppo.pretrained = True`
+
 ### Testing Commands
 
 Testing only supports single-GPU evaluation.
@@ -252,6 +259,10 @@ submission.zip
 └── README.md                # Setup and usage instructions
 ```
 
+**📥 Download submission examples:**
+- [Full model submission template](https://drive.google.com/file/d/1k5tMeocASZhCUL2SFUILqWTszNRYjC4L/view?usp=sharing)
+- [Mini model submission template](https://drive.google.com/file/d/1IRg5iPrWOOKKL6hTCWzZ2deQPLerBAMX/view?usp=sharing)
+
 ### Submission Process
 
 **Phase 1: Minival (Development)**
@@ -270,8 +281,6 @@ submission.zip
 
 - **Web UI**: For files ≤ 400 MB via EvalAI platform
 - **CLI**: For files > 400 MB using EvalAI command-line tools
-
-**📥 Baseline Example**: [Download submission template](https://drive.google.com/file/d/1k5tMeocASZhCUL2SFUILqWTszNRYjC4L/view?usp=sharing)
 
 ### Baseline Performance
 
