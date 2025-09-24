@@ -1,8 +1,8 @@
-# AIAA 4220 - Homework 3: Social Navigation with Habitat
+# AIAA 4220 - Homework 3: Social Navigation with Habitat Simulator
 
-This is homework 3 for AIAA 4220. In this homework, we will perform a **social navigation task** on the Habitat platform.
+This is the homework 3 for AIAA 4220. We will perform a **social navigation task** on the Habitat platform.
 
-This assignment challenges students to develop advanced **RGBD-based perception and navigation systems** for autonomous agents operating in **dynamic, human-populated indoor environments**. The goal is to create agents that **navigate efficiently** while adhering to **social norms**—avoiding collisions, respecting personal space, and adapting to human motion.
+This assignment challenges students to develop advanced **RGBD-based perception and navigation systems** for autonomous agents operating in **dynamic, human-populated indoor environments**. The goal is to create agents that **navigate efficiently** while adhering to **social norms**—avoiding collisions and respecting personal space.
 
 ## 📋 Table of Contents
 
@@ -16,7 +16,7 @@ This assignment challenges students to develop advanced **RGBD-based perception 
 
 ## 🔗 Prerequisites
 
-Our Docker image uses the headless version by default. The Habitat-sim version should be at least Habitat 3.0 for multi-agent support.
+Our Docker image uses the headless version. Habitat-sim version should be at least **Habitat 3.0** for multi-agent support.
 
 ### System Requirements
 * **OS:** Ubuntu 18.04+, macOS
@@ -26,11 +26,11 @@ Our Docker image uses the headless version by default. The Habitat-sim version s
 * **GPU Memory:** 
   - **Mini Models:** 8GB+ VRAM minimum
   - **Full Models:** 24GB+ VRAM recommended
-* **Disk Space:** ~100GB for full dataset and dependencies
+* **Disk Space:** ~30GB for full dataset and dependencies
 
 ## 📚 Dataset
 
-This homework uses the subset **RoboSense Track 2 Social Navigation Dataset**, which is based on the **Social-HM3D** benchmark and provides:
+This homework uses the subset of the **Social-HM3D** benchmark and provides:
 
 - **Goal-driven Trajectories**: Humans navigate with intent, avoiding random or repetitive paths
 - **Natural Behaviors**: Movement includes walking, pausing, and realistic avoidance via ORCA
@@ -176,6 +176,29 @@ sh habitat-baselines/habitat_baselines/rl/ddppo/single_node_falcon.sh
 sh habitat-baselines/habitat_baselines/rl/ddppo/single_node_falcon_mini.sh
 ```
 
+### Testing Commands
+
+Testing only supports single-GPU evaluation.
+
+**Full Model:**
+```bash
+python -u -m habitat_baselines.habitat_baselines.run \
+--config-name=social_nav_v2/falcon_hm3d.yaml
+```
+
+**Mini Model:**
+```bash
+python -u -m habitat_baselines.habitat_baselines.run \
+--config-name=social_nav_v2/falcon_hm3d_mini.yaml
+```
+
+**For limited VRAM (reduces environments from 8 to 1):**
+```bash
+python -u -m habitat_baselines.habitat_baselines.run \
+--config-name=social_nav_v2/falcon_hm3d_train_mini.yaml \
+habitat_baselines.num_environments=1
+```
+
 ## 📊 Evaluation Metrics
 
 Our benchmark focuses on two key aspects: **task completion** and **social compliance**.
@@ -210,6 +233,11 @@ This score encourages both efficiency and social awareness.
 
 ## 🚀 Submission Guidelines
 
+This homework follows the submission guidelines from [**IROS RoboSense Challenge -- Track 2 Social Navigation**](https://robosense2025.github.io/track2). All submissions are evaluated through the EvalAI platform. Submit your solution as follows: 
+
+### [🎖️ **EvalAI Challenge Entry**](https://eval.ai/web/challenges/challenge-page/2650/overview)
+
+
 ### Submission Format
 
 Submit a single `submission.zip` archive with the following structure:
@@ -239,6 +267,7 @@ submission.zip
 - Results available within 1-2 hours
 
 ### Upload Methods
+
 - **Web UI**: For files ≤ 400 MB via EvalAI platform
 - **CLI**: For files > 400 MB using EvalAI command-line tools
 
@@ -252,7 +281,7 @@ The Falcon baseline achieves the following performance on the evaluation set of 
 |---------------|-------------|-----------|--------|--------|-----------|--------|
 | Mini   | Minival     | 10.00     | 6.72  | 94.87  | 70.00     | 34.48 |
 | Full   | Minival     | 50.00     | 48.48  | 89.36  | 40.00     | 61.35 |
-| Mini   | Test        | 37.00     | 36.99  | 93.02  | 42.00     | 63.20 |
+| Mini   | Test        | 37.00     | 36.99  | 93.02  | 42.00     | 53.80 |
 | Full   | Test        | 53.00     | 48.80  | 91.20  | 41.00     | 63.20 |
 
 ## 🔍 Q&A
@@ -314,7 +343,7 @@ The action set has been refined to clearly distinguish between **stopping** *(en
 5 - pause           # newly added action for pausing without movement
 ```
 
-The two new actions (4-move_backward, 5-pause) are optional. Students can also continue using only actions 0-3 from pretrained models.
+The two new actions (4-move_backward, 5-pause) are **optional**. Students can also continue using only actions 0-3 from **pretrained models**.
 
 ### 5. How can I test my submission locally?
 
@@ -348,7 +377,7 @@ You can import and integrate your custom modules, modify the inference pipeline,
 
 **⚠️ However, the following restrictions must be respected:**
 1. **No bypassing simulation**: You cannot circumvent the simulator's navigation logic to directly generate result files
-2. **No additional sensors/information**: You cannot access extra environmental information or sensors beyond the allowed observation keys
+2. **No additional sensors/information**: You cannot access extra  information or sensors beyond allowed observations during evaluations
 3. **Open-source models only**: You cannot use proprietary pretrained models or private datasets that are not publicly accessible
 
 These restrictions ensure fair competition while maintaining the scientific integrity of the homework.
