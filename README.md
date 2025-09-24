@@ -2,7 +2,7 @@
 
 [![Web](https://img.shields.io/badge/Web-Falcon-blue)](https://zeying-gong.github.io/projects/falcon/)
 [![Paper](https://img.shields.io/badge/ICRA-2025-red)](https://ieeexplore.ieee.org/abstract/document/11127910/)
-[![EvalAI](https://img.shields.io/badge/Submit-EvalAI-green)](https://eval.ai/web/challenges/challenge-page/2557/overview)
+[![EvalAI](https://img.shields.io/badge/Submit-EvalAI-green)](https://eval.ai/web/challenges/challenge-page/2650/overview)
 [![License](https://img.shields.io/badge/License-Apache%202.0-yellow)](LICENSE)
 
 This is the homework 3 for AIAA 4220. We will perform a **social navigation task** on the Habitat simulator.
