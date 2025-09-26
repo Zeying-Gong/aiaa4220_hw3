@@ -27,11 +27,10 @@ Our Docker image uses the headless version. Habitat-sim version should be at lea
 * **OS:** Ubuntu 18.04+, macOS
 * **Python:** Python >= 3.9
 * **Build Tools:** CMake >= 3.10
-* **System RAM:** 50GB+ recommended (for storing datasets and large scenes)
 * **GPU Memory:** 
   - **Mini Models:** 8GB+ VRAM minimum
   - **Full Models:** 24GB+ VRAM recommended
-* **Disk Space:** ~30GB for full dataset and dependencies
+* **Disk Space:** ~80GB for full dataset and dependencies
 
 ## 📚 Dataset
 
@@ -50,7 +49,7 @@ This homework uses the subset of the **Social-HM3D** benchmark and provides:
 
 ### Dataset Preparation
 
-**⚠️ Important:** You must obtain API credentials for dataset download. Contact the instructors if you need assistance.
+**⚠️ Important:** You must obtain API credentials and habitat-sim environment for dataset download. Contact the instructors if you need assistance.
 
 1. **Download Scene Datasets**
 
@@ -65,20 +64,28 @@ This homework uses the subset of the **Social-HM3D** benchmark and provides:
    Download social navigation episodes for evaluations in [HuggingFace Page](https://huggingface.co/datasets/zgong313/aiaa4220-social-nav-dataset)
 
    ```bash
-   # After downloading, unzip and place in the default location
-   unzip -d data/datasets/pointnav
+   git lfs install
+   mkdir -p data/datasets/pointnav
+   cd data/datasets/pointnav
+   git clone https://huggingface.co/datasets/zgong313/aiaa4220-social-nav-dataset
+   cd aiaa4220-social-nav-dataset
+   mv * ..
+   cd ..
+   rm -rf aiaa4220-social-nav-dataset
    ```
 
-3. **Download Leg Animation Data**
+3. **Download Multi-agent Dependencies**
 
    ```bash
-   wget https://github.com/facebookresearch/habitat-lab/files/12502177/spot_walking_trajectory.csv -O data/robots/spot_data/spot_walking_trajectory.csv
-   ```
-
-4. **Download Multi-agent Dependencies**
-
-   ```bash
+   cd ../../../ 
    python -m habitat_sim.utils.datasets_download --uids habitat_humanoids hab3_bench_assets hab_spot_arm
+   ```
+
+4. **Download Leg Animation Data**
+
+   ```bash
+   mkdir -p data/robots/spot_data
+   wget https://github.com/facebookresearch/habitat-lab/files/12502177/spot_walking_trajectory.csv -O data/robots/spot_data/spot_walking_trajectory.csv
    ```
 
 ### Expected File Structure
@@ -96,7 +103,11 @@ aiaa4220_hw3/Falcon/
     │               ├── content/
     │               └── val.json.gz
     ├── scene_datasets/
+    │   └── hm3d/
     ├── robots/
+    │   ├── hab_spot_arm/
+    │   └── spot_data/
+    │       └── spot_walking_trajectory.csv
     ├── humanoids/
     ├── versioned_data/
     └── hab3_bench_assets/
@@ -136,6 +147,7 @@ This baseline is based on **Falcon** - *"From Cognition to Precognition: A Futur
      --runtime=nvidia \
      --entrypoint /bin/bash \
      -w /app/Falcon \
+     -v /path/to/your/data:/app/Falcon/data \
      -v /path/to/Falcon:/app/Falcon \
      zeyinggong/robosense_socialnav:v0.7
    ```
