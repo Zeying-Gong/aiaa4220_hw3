@@ -182,14 +182,30 @@ python -u -m habitat-baselines.habitat_baselines.run \
 --config-name=social_nav_v2/falcon_hm3d_train_mini.yaml
 ```
 
-**For limited VRAM (reduces environments from 8 to 1):**
+**For limited VRAM (reduces environments):**
+
+Use these commands to lower the number of parallel environments, which reduces VRAM consumption. Adjust further if needed.
+
+- 2 parallel environments:
 ```bash
 python -u -m habitat-baselines.habitat_baselines.run \
 --config-name=social_nav_v2/falcon_hm3d_train_mini.yaml \
-habitat_baselines.num_environments=1
+habitat_baselines.num_environments=2
+```
+
+- 1 environment:
+
+Extreme VRAM optimization. The `num_mini_batch` is synchronized with the number of environments to avoid training errors.
+
+```bash
+python -u -m habitat-baselines.habitat_baselines.run \
+--config-name=social_nav_v2/falcon_hm3d_train_mini.yaml \
+habitat_baselines.num_environments=1 \
+habitat_baselines.rl.ppo.num_mini_batch=1
 ```
 
 You can minitor the training processs with Tensorboard:
+
 ```bash
 # Step 1: Install required dependencies (if not installed)
 pip install six
@@ -234,9 +250,18 @@ python -u -m habitat-baselines.habitat_baselines.run \
 ```
 
 **For limited VRAM (reduces environments from 8 to 1):**
+
+**Full Model:**
 ```bash
 python -u -m habitat-baselines.habitat_baselines.run \
---config-name=social_nav_v2/falcon_hm3d_train_mini.yaml \
+--config-name=social_nav_v2/falcon_hm3d.yaml \
+habitat_baselines.num_environments=1
+```
+
+**Mini Model:**
+```bash
+python -u -m habitat-baselines.habitat_baselines.run \
+--config-name=social_nav_v2/falcon_hm3d_mini.yaml \
 habitat_baselines.num_environments=1
 ```
 
