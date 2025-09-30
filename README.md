@@ -99,6 +99,9 @@ aiaa4220_hw3/Falcon/
     │           ├── train/
     │           │   ├── content/
     │           │   └── train.json.gz
+    │           └── minival/
+    │               ├── content/
+    │               └── val.json.gz
     │           └── val/
     │               ├── content/
     │               └── val.json.gz
@@ -152,6 +155,11 @@ This baseline is based on **Falcon** - *"From Cognition to Precognition: A Futur
      zeyinggong/robosense_socialnav:v0.7
    ```
 
+4. **Activate the Environment**
+   ```bash
+   source activate falcon
+   ```
+
 **📝 Note:** Students are strongly encouraged to use this image for local development and testing to ensure compatibility with the remote evaluation environment.
 
 ### Training Commands
@@ -164,21 +172,34 @@ The baseline offers two model sizes:
 
 **Full Model:**
 ```bash
-python -u -m habitat_baselines.habitat_baselines.run \
+python -u -m habitat-baselines.habitat_baselines.run \
 --config-name=social_nav_v2/falcon_hm3d_train.yaml
 ```
 
 **Mini Model:**
 ```bash
-python -u -m habitat_baselines.habitat_baselines.run \
+python -u -m habitat-baselines.habitat_baselines.run \
 --config-name=social_nav_v2/falcon_hm3d_train_mini.yaml
 ```
 
 **For limited VRAM (reduces environments from 8 to 1):**
 ```bash
-python -u -m habitat_baselines.habitat_baselines.run \
+python -u -m habitat-baselines.habitat_baselines.run \
 --config-name=social_nav_v2/falcon_hm3d_train_mini.yaml \
 habitat_baselines.num_environments=1
+```
+
+You can minitor the training processs with Tensorboard:
+```bash
+# Step 1: Install required dependencies (if not installed)
+pip install six
+pip install tensorboard
+
+# Step 2: Launch TensorBoard and point to the log directory
+tensorboard --logdir=/app/Falcon/training/falcon/hm3d/tb
+
+# Step 3: Access the TensorBoard dashboard (after running Step 2)
+# Open your browser and visit the URL displayed in the terminal (typically http://localhost:6006)
 ```
 
 #### Multi-GPU Training
@@ -193,7 +214,8 @@ sh habitat-baselines/habitat_baselines/rl/ddppo/single_node_falcon.sh
 sh habitat-baselines/habitat_baselines/rl/ddppo/single_node_falcon_mini.sh
 ```
 
-You can also finetune from the pretrain weights, which can be found in this [link](https://drive.google.com/drive/folders/1Bx1L9U345P_9pUfADk3Tnj7uK01EpxZY?usp=sharing). Download it to the root directory. Remember to set `habitat_baselines.rl.ddppo.pretrained = True`
+You can also finetune from the pretrain weights, which can be found in this [link](https://drive.google.com/drive/folders/1Bx1L9U345P_9pUfADk3Tnj7uK01EpxZY?usp=sharing). Download it to the root directory. Remember to set `habitat_baselines.rl.ddppo.pretrained = True`. After completing the training, you need to process the generated weights before using them for evaluation or deployment. For detailed operation steps, refer to the `pretrained_model_transfer.ipynb` notebook.
+
 
 ### Testing Commands
 
@@ -201,19 +223,19 @@ Testing only supports single-GPU evaluation.
 
 **Full Model:**
 ```bash
-python -u -m habitat_baselines.habitat_baselines.run \
+python -u -m habitat-baselines.habitat_baselines.run \
 --config-name=social_nav_v2/falcon_hm3d.yaml
 ```
 
 **Mini Model:**
 ```bash
-python -u -m habitat_baselines.habitat_baselines.run \
+python -u -m habitat-baselines.habitat_baselines.run \
 --config-name=social_nav_v2/falcon_hm3d_mini.yaml
 ```
 
 **For limited VRAM (reduces environments from 8 to 1):**
 ```bash
-python -u -m habitat_baselines.habitat_baselines.run \
+python -u -m habitat-baselines.habitat_baselines.run \
 --config-name=social_nav_v2/falcon_hm3d_train_mini.yaml \
 habitat_baselines.num_environments=1
 ```
@@ -332,12 +354,12 @@ If your submission requires additional dependencies, add installation commands t
 **Example `run.sh` with dependency installation:**
 ```bash
 #!/bin/bash
+source activate falcon
 # Install additional dependencies
 conda install -c conda-forge your_package
 pip install specific_library==1.2.3
 
 # Run your inference
-source activate falcon
 python your_inference_script.py
 ```
 
