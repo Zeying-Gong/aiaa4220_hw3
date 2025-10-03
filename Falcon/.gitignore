@@ -79,9 +79,6 @@ target/
 # Jupyter NB Checkpoints
 .ipynb_checkpoints/
 
-# exclude data from source control by default
-data
-
 # Mac OS-specific storage files
 .DS_Store
 
@@ -123,7 +120,7 @@ habitat-baselines/habitat_baselines/config/social_nav_v2/test_only_pointnav.yaml
 habitat-lab/habitat/config/benchmark/nav/socialnav_v2/test_only_pointnav_task.yaml
 habitat-lab/habitat/config/habitat/dataset/pointnav/hm3d_fin.yaml
 0807_spot_hm3d/
-data/
+./data/
 output_test/
 docs/
 res/
