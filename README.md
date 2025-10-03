@@ -230,7 +230,7 @@ sh habitat-baselines/habitat_baselines/rl/ddppo/single_node_falcon.sh
 sh habitat-baselines/habitat_baselines/rl/ddppo/single_node_falcon_mini.sh
 ```
 
-You can also finetune from the pretrain weights, which can be found in this [link](https://drive.google.com/drive/folders/1Bx1L9U345P_9pUfADk3Tnj7uK01EpxZY?usp=sharing). Download it to the root directory. Remember to set `habitat_baselines.rl.ddppo.pretrained = True`. After completing the training, you need to process the generated weights before using them for evaluation or deployment. For detailed operation steps, refer to the `pretrained_model_transfer.ipynb` notebook.
+You can also finetune from the pretrain weights, which can be found in this [link](https://drive.google.com/file/d/1FWYL59h4zt1YCfa427VUB77fPBMCA7kp/view?usp=sharing). Download it to the root directory. Remember to set `habitat_baselines.rl.ddppo.pretrained = True`. After completing the training, you need to process the generated weights before using them for evaluation or deployment. For detailed operation steps, refer to the `pretrained_model_transfer.ipynb` notebook.
 
 
 ### Testing Commands
