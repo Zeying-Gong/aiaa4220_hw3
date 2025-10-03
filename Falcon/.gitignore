@@ -112,7 +112,6 @@ data
 evaluation/
 
 debug/
-pretrained_model/
 watch_json_gz.ipynb
 input/
 input_test/
