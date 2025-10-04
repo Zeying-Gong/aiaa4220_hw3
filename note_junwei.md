@@ -22,20 +22,20 @@
 
             root@ai-precognition-laptop2:/app/Falcon# source activate falcon
 
-            # num_env=2, step 1.5M, 20 checkpoints
             (falcon) root@ai-precognition-laptop2:/app/Falcon# python -u -m habitat-baselines.habitat_baselines.run --config-name=social_nav_v2/falcon_hm3d_train_mini_junwei.yaml
                 # you can ignore all the  SSD Load Failure!
-                # takes 20 minutes before training starts
+                # Using the reduce training set with 15 scenes.
+                # num_env=4, step 1.5M, 20 checkpoints, takes 5.3 GB GPU memory/8GB RAM,  CPU Util at ~20%, GPU Util at ~10%; takes 40 hours.
 
 
-    # Use tensorboard to check your training progress. Check for losses and the success rate
-        $ pip install tensorboard
-        (base) junweil@ai-precognition-laptop2:~/projects/aiaa4220$ tensorboard --logdir=aiaa4220_hw3/Falcon/training/falcon/hm3d/tb --bind_all
+        # Use tensorboard to check your training progress. Check for losses and the success rate
+            $ pip install tensorboard
+            (base) junweil@ai-precognition-laptop2:~/projects/aiaa4220$ tensorboard --logdir=aiaa4220_hw3/Falcon/evaluation/falcon/hm3d/tb/ --bind_all
 
-        # open a browser http://localhost:6006
-            # 在tb里有smoothing的选项，可以看看平滑后的曲线整体趋势，是否上升，选取拐点附近的checkpoint，比如这里选择1.5M step的
+            # open a browser http://localhost:6006
+                # 在tb里有smoothing的选项，可以看看平滑后的曲线整体趋势，是否上升，选取拐点附近的checkpoint，比如这里选择1.5M step的
 
-        # checkpoint
+            # checkpoint saved at Falcon/evaluation/falcon/hm3d/checkpoints/
 
 ```
 
@@ -43,6 +43,29 @@
 ```
     # get data and code from https://www.kaggle.com/competitions/hkustgz-aiaa-4220-2025-fall-project-2/data
         # 4GB data
+
+        (base) junweil@ai-precognition-machine12:~/projects/aiaa4220/project2$ unzip ~/Downloads/hkustgz-aiaa-4220-2025-fall-project-2.zip
+
+    # install env
+        # I'm using 1080 TI, NVIDIA-SMI Driver Version: 575.64.03      CUDA Version: 12.9
+        $ conda create -n aiaa4220 python=3.10
+        $ pip install torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 -i https://pypi.tuna.tsinghua.edu.cn/simple
+        $ pip install numpy==1.24
+        $ pip install openmim
+        $ mim install mmengine==0.10.7 mmcv==2.1.0 mmdet==3.3.0
+        $ pip install pycocotools
+
+        # train with 1 GPU (1080 TI)
+            (aiaa4220) junweil@ai-precognition-machine12:~/projects/aiaa4220/project2/resource/mm$ bash tools/dist_train.sh config/faster-rcnn_r50_fpn_giou_20e.py 1
+
+            # this will download resnet-50 imagenet model as the feature encoder and train the whole faster rcnn model
+            # too slow.  download the model first
+                ~/.cache/torch/hub/checkpoints/resnet50-0676ba61.pth
+
+            # checkpoint saved to /home/junweil/projects/aiaa4220/project2/resource/mm/work_dirs/faster-rcnn_r50_fpn_giou_20e
+
+            # takes up 9.7GB GPU memory, 10  hours to train for 20 epochs
+            # modify config/faster-rcnn_r50_fpn_giou_20e.py if you want different batch_size, etc.
 ```
 
 + Setting Up http server for data downloading

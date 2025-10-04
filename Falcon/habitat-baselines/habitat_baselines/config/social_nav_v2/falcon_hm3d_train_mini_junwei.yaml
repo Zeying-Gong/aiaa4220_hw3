@@ -98,7 +98,7 @@ habitat_baselines:
   num_environments: 4 # parallel env numbers
   checkpoint_folder: "evaluation/falcon/hm3d/checkpoints" # save_dir for training
   num_updates: -1
-  total_num_steps: 1500000 # 1.5M
+  total_num_steps: 1000000 # 1M steps
   log_interval: 10
   num_checkpoints: 20 # interrupt recovery
   # Force PyTorch to be single threaded as
