@@ -23,9 +23,8 @@
             root@ai-precognition-laptop2:/app/Falcon# source activate falcon
 
             (falcon) root@ai-precognition-laptop2:/app/Falcon# python -u -m habitat-baselines.habitat_baselines.run --config-name=social_nav_v2/falcon_hm3d_train_mini_junwei.yaml
-                # you can ignore all the  SSD Load Failure!
                 # Using the reduce training set with 15 scenes.
-                # num_env=4, step 1.5M, 20 checkpoints, takes 5.3 GB GPU memory/8GB RAM,  CPU Util at ~20%, GPU Util at ~10%; takes 40 hours.
+                # num_env=4, train for 80K steps, save 20 checkpoints, takes 5.3 GB GPU memory/8GB RAM,  CPU Util at ~20%, GPU Util at ~10%; takes 30 hours
 
 
         # Use tensorboard to check your training progress. Check for losses and the success rate
@@ -33,9 +32,13 @@
             (base) junweil@ai-precognition-laptop2:~/projects/aiaa4220$ tensorboard --logdir=aiaa4220_hw3/Falcon/evaluation/falcon/hm3d/tb/ --bind_all
 
             # open a browser http://localhost:6006
-                # 在tb里有smoothing的选项，可以看看平滑后的曲线整体趋势，是否上升，选取拐点附近的checkpoint，比如这里选择1.5M step的
+                # 在tb里有smoothing的选项，可以看看平滑后的曲线整体趋势，是否上升，选取拐点附近的checkpoint
 
             # checkpoint saved at Falcon/evaluation/falcon/hm3d/checkpoints/
+
+        # local validation and visualization
+
+        # test and submit to eval.ai leaderboard
 
 ```
 
@@ -66,6 +69,10 @@
 
             # takes up 9.7GB GPU memory, 10  hours to train for 20 epochs
             # modify config/faster-rcnn_r50_fpn_giou_20e.py if you want different batch_size, etc.
+
+        # val
+
+        # test and submit to Kaggle leaderboard
 ```
 
 + Setting Up http server for data downloading
