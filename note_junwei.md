@@ -24,7 +24,7 @@
 
             (falcon) root@ai-precognition-laptop2:/app/Falcon# python -u -m habitat-baselines.habitat_baselines.run --config-name=social_nav_v2/falcon_hm3d_train_mini_junwei.yaml
                 # Using the reduce training set with 15 scenes.
-                # num_env=4, train for 80K steps, save 20 checkpoints, takes 5.3 GB GPU memory/8GB RAM,  CPU Util at ~20%, GPU Util at ~10%; takes 30 hours
+                # num_env=4, train for 80K steps, save 20 checkpoints, takes 5.3 GB GPU memory/8GB RAM,  CPU Util at ~20%, GPU Util at ~10%; takes ~20 hours
 
 
         # Use tensorboard to check your training progress. Check for losses and the success rate
@@ -59,6 +59,9 @@
         $ pip install pycocotools
 
         # train with 1 GPU (1080 TI)
+            # modify config/faster-rcnn_r50_fpn_giou_20e.py to train with batch_size=2;
+            # takes up ~6GB GPU memory, 10 hours to train for 20 epochs
+
             (aiaa4220) junweil@ai-precognition-machine12:~/projects/aiaa4220/project2/resource/mm$ bash tools/dist_train.sh config/faster-rcnn_r50_fpn_giou_20e.py 1
 
             # this will download resnet-50 imagenet model as the feature encoder and train the whole faster rcnn model
@@ -67,8 +70,7 @@
 
             # checkpoint saved to /home/junweil/projects/aiaa4220/project2/resource/mm/work_dirs/faster-rcnn_r50_fpn_giou_20e
 
-            # takes up 9.7GB GPU memory, 10  hours to train for 20 epochs
-            # modify config/faster-rcnn_r50_fpn_giou_20e.py if you want different batch_size, etc.
+
 
         # val
 
