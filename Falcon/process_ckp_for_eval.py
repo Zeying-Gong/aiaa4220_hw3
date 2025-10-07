@@ -9,7 +9,7 @@ parser.add_argument("output_model_path", help="homie observes 29 instead of 27 d
 if __name__ == "__main__":
     args = parser.parse_args()
     checkpoint_path_v0 = args.model_path
-    pretrained_state = torch.load(checkpoint_path_v0)
+    pretrained_state = torch.load(checkpoint_path_v0, map_location=torch.device('cpu'))
     model_state_dict = pretrained_state[0]['state_dict']
 
     filtered_pretrained_state_dict = {
