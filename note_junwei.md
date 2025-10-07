@@ -27,16 +27,19 @@
                 # num_env=4, train for 80K steps, save 20 checkpoints, takes 5.3 GB GPU memory/8GB RAM,  CPU Util at ~20%, GPU Util at ~10%; takes ~20 hours
 
 
-        # Use tensorboard to check your training progress. Check for losses and the success rate
-            $ pip install tensorboard
-            (base) junweil@ai-precognition-laptop2:~/projects/aiaa4220$ tensorboard --logdir=aiaa4220_hw3/Falcon/evaluation/falcon/hm3d/tb/ --bind_all
+            # Use tensorboard to check your training progress. Check for losses and the success rate
+                $ pip install tensorboard
+                (base) junweil@ai-precognition-laptop2:~/projects/aiaa4220$ tensorboard --logdir=aiaa4220_hw3/Falcon/evaluation/falcon/hm3d/tb/ --bind_all
 
-            # open a browser http://localhost:6006
-                # 在tb里有smoothing的选项，可以看看平滑后的曲线整体趋势，是否上升，选取拐点附近的checkpoint
+                # open a browser http://localhost:6006
+                    # 在tb里有smoothing的选项，可以看看平滑后的曲线整体趋势，是否上升，选取拐点附近的checkpoint
 
-            # checkpoint saved at Falcon/evaluation/falcon/hm3d/checkpoints/
+                # checkpoint saved at Falcon/evaluation/falcon/hm3d/checkpoints/
+                # I trained for 16 hours on RTX 2060 laptop  and got 90% success date on training set
 
-        # local validation and visualization
+        # local validation and visualization using the minival split
+
+            (falcon) root@ai-precognition-laptop2:/app/Falcon# python -u -m habitat-baselines.habitat_baselines.run --config-name=social_nav_v2/falcon_hm3d_mini.yaml habitat_baselines.num_environments=4 habitat.dataset.data_path=data/datasets/pointnav/social-hm3d/minival/minival.json.gz habitat_baselines.eval_ckpt_path_dir=evaluation/falcon/hm3d/checkpoints/ckpt.19.pth
 
         # test and submit to eval.ai leaderboard
 
@@ -58,7 +61,7 @@
         $ mim install mmengine==0.10.7 mmcv==2.1.0 mmdet==3.3.0
         $ pip install pycocotools
 
-        # train with 1 GPU (1080 TI)
+        # train with 1 GPU (1080 TI) (will run validation along the way)
             # modify config/faster-rcnn_r50_fpn_giou_20e.py to train with batch_size=2;
             # takes up ~6GB GPU memory, 10 hours to train for 20 epochs
 
@@ -70,11 +73,18 @@
 
             # checkpoint saved to /home/junweil/projects/aiaa4220/project2/resource/mm/work_dirs/faster-rcnn_r50_fpn_giou_20e
 
-
-
-        # val
+            # I trained for 10 hours and got Epoch(val) [20][1000/1000]    coco/bbox_mAP: 0.7630
 
         # test and submit to Kaggle leaderboard
+            (aiaa4220) junweil@ai-precognition-machine12:~/projects/aiaa4220/project2/resource/mm$ bash tools/dist_test.sh config/faster-rcnn_r50_fpn_giou_20e.py work_dirs/faster-rcnn_r50_fpn_giou_20e/epoch_20.pth 1
+
+            # test result convert to kaggle submission format
+                # paste the code from https://www.kaggle.com/competitions/hkustgz-aiaa-4220-2025-fall-project-2/overview into convert_to_submission.py
+
+                (aiaa4220) junweil@ai-precognition-machine12:~/projects/aiaa4220/project2/resource$ python convert_to_submission.py --pred mm/work_dirs/faster-rcnn_r50_fpn_giou_20e/test.bbox.json --output submission.csv
+
+            # submit submission.csv via the website
+                #
 ```
 
 + Setting Up http server for data downloading
