@@ -297,6 +297,65 @@ $$Total = 0.4 \cdot SR + 0.3 \cdot SPL + 0.3 \cdot PSC$$
 
 This score encourages both efficiency and social awareness.
 
+## 🖥️ Visualization Instructions
+
+Habitat Simulator supports real-time and post-hoc visualization of navigation episodes (e.g., agent trajectory, human movements, RGBD observations) via two core modes:  
+- **Local interactive visualization** (for debugging)  
+- **Log-based visualization** (for saving results to disk/TensorBoard)
+
+### 1. Key Visualization Configuration: `video_option`
+
+The `video_option` parameter in the YAML config file (e.g., `social_nav_v2/falcon_hm3d.yaml`) controls where visualization data is saved. The two most 常用 (common) options are:
+
+- `"disk"`: Saves video clips of episodes to a local directory (for offline review).  
+- `"tensorboard"`: Logs videos and observation frames to TensorBoard (for integrated training/evaluation tracking).
+
+You can enable one or both options by modifying the config:
+
+```yaml
+# In social_nav_v2/falcon_hm3d.yaml (or training configs)
+habitat_baselines:
+  eval:
+    video_option: ["disk", "tensorboard"]  # Enable both disk and TensorBoard visualization
+    video_dir: "visualization/eval_videos"  # Path to save videos (for "disk" option)
+    video_fps: 10  # Frames per second of output videos
+    video_width: 640  # Video width (matches agent's RGB observation width by default)
+    video_height: 480  # Video height (matches agent's RGB observation height by default)
+```
+
+### 2. Disk Visualization (Save Videos Locally)
+
+When `video_option: ["disk"]` is enabled, Habitat automatically saves episode videos to the directory specified by `video_dir` (default: `visualization/eval_videos`).
+
+**Output Details:**
+- Each episode generates a separate video file named `episode_{episode_id}_video.mp4` (e.g., `episode_0_video.mp4`).
+- Example path to videos:
+```
+aiaa4220_hw3/Falcon/
+└── visualization/
+    └── eval_videos/
+        ├── episode_0_video.mp4
+        ├── episode_1_video.mp4
+        └── ...
+```
+
+### 3. TensorBoard Visualization (Integrated Tracking)
+
+When `video_option: ["tensorboard"]` is enabled, videos and observation frames are logged to TensorBoard (alongside training metrics like loss and SR). This is ideal for comparing episodes across training iterations or evaluating social compliance (e.g., checking if the agent avoids humans).
+
+**Usage Steps:**
+1. Ensure `video_option` includes `"tensorboard"` in the config.
+2. Run training/evaluation (videos are logged automatically during episode execution).
+3. Launch TensorBoard and navigate to the **"Videos"** tab:
+
+```bash
+# For training logs
+tensorboard --logdir=/app/Falcon/training/falcon/hm3d/tb
+
+# OR for evaluation logs
+tensorboard --logdir=/app/Falcon/evaluation/falcon/hm3d/tb
+```
+
 ## 🚀 Submission Guidelines
 
 This homework follows the submission guidelines from [**IROS RoboSense Challenge -- Track 2 Social Navigation**](https://robosense2025.github.io/track2). All submissions are evaluated through the EvalAI platform. Submit your solution as follows: 

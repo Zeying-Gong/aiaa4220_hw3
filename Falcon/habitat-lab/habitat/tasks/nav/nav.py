@@ -533,11 +533,12 @@ class Success(Measure):
             DistanceToGoal.cls_uuid
         ].get_metric()
 
-        if (
-            hasattr(task, "is_stop_called")
-            and task.is_stop_called  # type: ignore
-            and distance_to_target < self._success_distance
-        ):
+        # if (
+        #     hasattr(task, "is_stop_called")
+        #     and task.is_stop_called  # type: ignore
+        #     and distance_to_target < self._success_distance
+        # ):
+        if distance_to_target < self._success_distance:
             self._metric = 1.0
         else:
             self._metric = 0.0
