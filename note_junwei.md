@@ -37,11 +37,71 @@
                 # checkpoint saved at Falcon/evaluation/falcon/hm3d/checkpoints/
                 # I trained for 16 hours on RTX 2060 laptop  and got 90% success date on training set
 
+                # you can ignore all these errors:
+                    malloc_consolidate(): invalid chunk size
+                    Aborted (core dumped)
+
+                # and if sometimes you see connection close errors, stop the container and start a new one will work
+
         # local validation and visualization using the minival split
 
-            (falcon) root@ai-precognition-laptop2:/app/Falcon# python -u -m habitat-baselines.habitat_baselines.run --config-name=social_nav_v2/falcon_hm3d_mini.yaml habitat_baselines.num_environments=4 habitat.dataset.data_path=data/datasets/pointnav/social-hm3d/minival/minival.json.gz habitat_baselines.eval_ckpt_path_dir=evaluation/falcon/hm3d/checkpoints/ckpt.19.pth
+            # You need to process the checkpoint to remove the aux loss model part
+
+            # I select ckpt.15.pth for final testing according to validation performance
+
+                (falcon) root@ai-precognition-laptop2:/app/Falcon# python process_ckp_for_eval.py evaluation/falcon/hm3d/checkpoints/ckpt.15.pth evaluation/falcon/hm3d/checkpoints/eval.pth
+
+            # Now you can validate locally
+
+                (falcon) root@ai-precognition-laptop2:/app/Falcon# python -u -m habitat-baselines.habitat_baselines.run --config-name=social_nav_v2/falcon_hm3d_mini.yaml habitat_baselines.num_environments=4 habitat.dataset.data_path=data/datasets/pointnav/social-hm3d/minival/minival.json.gz habitat_baselines.eval_ckpt_path_dir=evaluation/falcon/hm3d/checkpoints/eval.pth
+
+            # Performance on Minival
+
+                Average episode distance_to_goal: 1.7688 # lower better
+                Average episode spl: 0.5812
+                Average episode psc: 0.8965
+                Average episode human_collision: 0.4000  # lower better
+                Average episode success: 0.6000
+
+            # compared to running eval with the pretrained pretrained_model
+                (falcon) root@ai-precognition-laptop2:/app/Falcon# python -u -m habitat-baselines.habitat_baselines.run --config-name=social_nav_v2/falcon_hm3d_mini.yaml habitat_baselines.num_environments=4 habitat.dataset.data_path=data/datasets/pointnav/social-hm3d/minival/minival.json.gz habitat_baselines.eval_ckpt_path_dir=pretrained_model/pretrained_mini.pth
+
+                Average episode distance_to_goal: 3.4038
+                Average episode spl: 0.3735
+                Average episode psc: 0.931
+                Average episode human_collision: 0.5000
+                Average episode success:0.4000
+
+            # Visualize the validation episode with your policy
 
         # test and submit to eval.ai leaderboard
+
+            # submission page: https://eval.ai/web/challenges/challenge-page/2650/submission
+
+                # You need to download the mini submission template zip and put your checkpoint in it
+                    # https://drive.google.com/file/d/1IRg5iPrWOOKKL6hTCWzZ2deQPLerBAMX/view
+
+                    # decompress it, then replace the pretrained_model/pretrained_mini.pth with your processed .pth checkpoint file (and it needs to be the same file name, otherwise you should modify falcon_hm3d_minival_mini.yaml's eval_ckpt_path_dir)
+
+                # Compress it
+                    $ zip -r checkpoint.15.eval.zip checkpoint.15.eval.pth_run/
+
+                # upload the zip file to the submission page, select Public, method name use Your Group Name+Your method name
+
+            # check all your submission status: https://eval.ai/web/challenges/challenge-page/2650/my-submission
+
+                # You can check the submission page's std output and std error file and check whether the run is successful
+
+            # leaderboard page: https://eval.ai/web/challenges/challenge-page/2650/leaderboard
+                # you can check off all other runs' "Show on Leaderboard" in "My Submission" page, so you can see the metrics on "Leaderboard" page
+
+                 # minival should takes ~5minutes
+                    # on eval.ai the minival results might be different due to huaman agent's random speed
+
+                # We will mainly look at your results on the Test split
+                    # submitting to Test split, the mini model should takes ~30 minutes to process
+                    # the pretrained_mini.pth model gets 45% SR on the leaderboard
+                    # my finetuned checkpoint.15.pth gets 47% SR on the leaderboard
 
 ```
 
@@ -80,8 +140,15 @@
 
             # test result convert to kaggle submission format
                 # paste the code from https://www.kaggle.com/competitions/hkustgz-aiaa-4220-2025-fall-project-2/overview into convert_to_submission.py
+                    # or use this
 
-                (aiaa4220) junweil@ai-precognition-machine12:~/projects/aiaa4220/project2/resource$ python convert_to_submission.py --pred mm/work_dirs/faster-rcnn_r50_fpn_giou_20e/test.bbox.json --output submission.csv
+                # Return to project root
+                cd ..
+                # Convert predictions to submission.csv
+                # For Deformable DETR
+                python convert_to_submission.py --pred mm/work_dirs/deformable-detr_r50/test.bbox.json --test data/test.json --output submission.csv
+                # For Faster R-CNN
+                python convert_to_submission.py --pred mm/work_dirs/faster-rcnn_r50_fpn_giou_20e/test.bbox.json --test data/test.json --output submission.csv
 
             # submit submission.csv via the website
                 #
