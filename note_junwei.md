@@ -15,7 +15,7 @@
     # check if any docker container is already running. It is good to remove containers if not using them
         $ sudo docker ps -ls
 
-    # run the project 3 image
+    # run the project 3 docker image
         $ sudo docker run --name homework -it --gpus all --network host      --runtime=nvidia      --entrypoint /bin/bash      -w /app/Falcon      -v /home/junweil/projects/aiaa4220/aiaa4220_hw3/Falcon/:/app/Falcon zeyinggong/robosense_socialnav:v0.7
 
         # After entering docker container
@@ -73,6 +73,13 @@
                 Average episode success:0.4000
 
             # Visualize the validation episode with your policy
+
+                # videos will be saved to evaluation/falcon/hm3d/video_checkpoint15
+                    # each episode will be saved to one video, with the robot's observation and a top-down map shown (with the robot's location and the humans)
+
+
+                (falcon) root@ai-precognition-laptop2:/app/Falcon# python -u -m habitat-baselines.habitat_baselines.run --config-name=social_nav_v2/falcon_hm3d_mini.yaml habitat_baselines.num_environments=4 habitat.dataset.data_path=data/datasets/pointnav/social-hm3d/minival/minival.json.gz habitat_baselines.eval_ckpt_path_dir=evaluation/falcon/hm3d/checkpoints/eval.pth habitat_baselines.video_dir=evaluation/falcon/hm3d/video_checkpoint15 habitat_baselines.eval.video_option=["disk"]
+
 
         # test and submit to eval.ai leaderboard
 
@@ -140,18 +147,14 @@
 
             # test result convert to kaggle submission format
                 # paste the code from https://www.kaggle.com/competitions/hkustgz-aiaa-4220-2025-fall-project-2/overview into convert_to_submission.py
-                    # or use this
+                    # or use this https://github.com/Zeying-Gong/aiaa4220_hw3/blob/main/convert_to_submission.py
 
                 # Return to project root
-                cd ..
-                # Convert predictions to submission.csv
-                # For Deformable DETR
-                python convert_to_submission.py --pred mm/work_dirs/deformable-detr_r50/test.bbox.json --test data/test.json --output submission.csv
-                # For Faster R-CNN
-                python convert_to_submission.py --pred mm/work_dirs/faster-rcnn_r50_fpn_giou_20e/test.bbox.json --test data/test.json --output submission.csv
+                    (aiaa4220) junweil@ai-precognition-machine12:~/projects/aiaa4220/project2$ python aiaa4220_hw3/convert_to_submission.py --pred resource/mm/work_dirs/faster-rcnn_r50_fpn_giou_20e/test.bbox.json --test resource/data/test.json --output resource/submission.csv
 
             # submit submission.csv via the website
-                #
+                # https://www.kaggle.com/competitions/hkustgz-aiaa-4220-2025-fall-project-2/submissions
+                # Done! mAP 0.78
 ```
 
 + Setting Up http server for data downloading

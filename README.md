@@ -28,7 +28,7 @@ Our Docker image uses the headless version. Habitat-sim version should be at lea
 * **Python:** Python >= 3.9
 * **Build Tools:** CMake >= 3.10
 * **GPU Memory:** 
-  - **Mini Models:** 8GB+ VRAM minimum
+  - **Mini Models:** 6GB+ VRAM minimum
   - **Full Models:** 24GB+ VRAM recommended
 * **Disk Space:** ~80GB for full dataset and dependencies
 
@@ -49,7 +49,7 @@ This homework uses the subset of the **Social-HM3D** benchmark and provides:
 
 ### Dataset Preparation
 
-**⚠️ Important:** You must obtain API credentials and habitat-sim environment for dataset download. Contact the instructors if you need assistance.
+**⚠️ Important:** You must obtain API credentials and habitat-sim environment for dataset download. You can download our prepared dataset (only contains the minimal scenes to get you started. Check point 5.)
 
 1. **Download Scene Datasets**
 
@@ -87,6 +87,16 @@ This homework uses the subset of the **Social-HM3D** benchmark and provides:
    mkdir -p data/robots/spot_data
    wget https://github.com/facebookresearch/habitat-lab/files/12502177/spot_walking_trajectory.csv -O data/robots/spot_data/spot_walking_trajectory.csv
    ```
+
+5. **Download Everything from our Campus Server**
+
+You will need to be on campus network to download. The package is 30GB.
+```
+   wget -c http://office.precognition.team/shares/aiaa4220_hw3_data_v2.tgz
+   # when no one else is downloading it, 30GB should takes 5 minutes to download with 100MB/s
+   # use tar -zxvf to decompress (You should ask GPT if you don't know this.)
+   # move the data/ folder according to instructions below
+```
 
 ### Expected File Structure
 
@@ -126,7 +136,7 @@ This baseline is based on **Falcon** - *"From Cognition to Precognition: A Futur
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/Zeying-Gong/aiaa4220_hw3.git --recursive
+   git clone https://github.com/Zeying-Gong/aiaa4220_hw3.git
    cd aiaa4220_hw3/Falcon
    ```
 
@@ -155,7 +165,7 @@ This baseline is based on **Falcon** - *"From Cognition to Precognition: A Futur
      zeyinggong/robosense_socialnav:v0.7
    ```
 
-4. **Activate the Environment**
+4. **Inside the Container; Activate the Environment**
    ```bash
    source activate falcon
    ```
@@ -166,43 +176,26 @@ This baseline is based on **Falcon** - *"From Cognition to Precognition: A Futur
 
 The baseline offers two model sizes:
 - **Full version**: ResNet50 + LSTM512 (requires 24GB+ VRAM)
-- **Mini version**: ResNet18 + LSTM128 (requires 8GB+ VRAM)
+- **Mini version**: ResNet18 + LSTM128 (requires 6GB+ VRAM)
 
 #### Single-GPU Training
 
+**Mini Model:**
++ Junwei: I recommend running this first to make sure everything works. I tested this command on a RTX 2060 laptop with num_env=4 and trained for 20 hours with good improvements.
++ The following config will finetune `Falcon/pretrained_model/pretrained_mini.pth`.
++ For more, check my full running log [here](./note_junwei.md).
+```bash
+python -u -m habitat-baselines.habitat_baselines.run \
+--config-name=social_nav_v2/falcon_hm3d_train_mini_junwei.yaml
+```
+
 **Full Model:**
+Need at least 24GB GPU to run it.
 ```bash
 python -u -m habitat-baselines.habitat_baselines.run \
 --config-name=social_nav_v2/falcon_hm3d_train.yaml
 ```
 
-**Mini Model:**
-```bash
-python -u -m habitat-baselines.habitat_baselines.run \
---config-name=social_nav_v2/falcon_hm3d_train_mini.yaml
-```
-
-**For limited VRAM (reduces environments):**
-
-Use these commands to lower the number of parallel environments, which reduces VRAM consumption. Adjust further if needed.
-
-- 2 parallel environments:
-```bash
-python -u -m habitat-baselines.habitat_baselines.run \
---config-name=social_nav_v2/falcon_hm3d_train_mini.yaml \
-habitat_baselines.num_environments=2
-```
-
-- 1 environment:
-
-Extreme VRAM optimization. The `num_mini_batch` is synchronized with the number of environments to avoid training errors.
-
-```bash
-python -u -m habitat-baselines.habitat_baselines.run \
---config-name=social_nav_v2/falcon_hm3d_train_mini.yaml \
-habitat_baselines.num_environments=1 \
-habitat_baselines.rl.ppo.num_mini_batch=1
-```
 
 You can minitor the training processs with Tensorboard:
 
@@ -230,12 +223,26 @@ sh habitat-baselines/habitat_baselines/rl/ddppo/single_node_falcon.sh
 sh habitat-baselines/habitat_baselines/rl/ddppo/single_node_falcon_mini.sh
 ```
 
-You can also finetune from the pretrain weights, which can be found in this [link](https://drive.google.com/file/d/1FWYL59h4zt1YCfa427VUB77fPBMCA7kp/view?usp=sharing). Download it to the root directory. Remember to set `habitat_baselines.rl.ddppo.pretrained = True`. After completing the training, you need to process the generated weights before using them for evaluation or deployment. For detailed operation steps, refer to the `pretrained_model_transfer.ipynb` notebook.
-
 
 ### Testing Commands
 
+
+After completing the training, you need to process the generated weights before using them for evaluation or deployment (removing the aux network).
 Testing only supports single-GPU evaluation.
+
+**Processing**
+
+I select ckpt.15.pth for final testing according to validation performance
+```
+   python process_ckp_for_eval.py evaluation/falcon/hm3d/checkpoints/ckpt.15.pth evaluation/falcon/hm3d/checkpoints/eval.pth
+```
+
+**Mini Model validation using the minival split:**
+```bash
+   python -u -m habitat-baselines.habitat_baselines.run --config-name=social_nav_v2/falcon_hm3d_mini.yaml habitat_baselines.num_environments=4 \
+      habitat.dataset.data_path=data/datasets/pointnav/social-hm3d/minival/minival.json.gz \
+      habitat_baselines.eval_ckpt_path_dir=evaluation/falcon/hm3d/checkpoints/eval.pth
+```
 
 **Full Model:**
 ```bash
@@ -243,27 +250,6 @@ python -u -m habitat-baselines.habitat_baselines.run \
 --config-name=social_nav_v2/falcon_hm3d.yaml
 ```
 
-**Mini Model:**
-```bash
-python -u -m habitat-baselines.habitat_baselines.run \
---config-name=social_nav_v2/falcon_hm3d_mini.yaml
-```
-
-**For limited VRAM (reduces environments from 8 to 1):**
-
-**Full Model:**
-```bash
-python -u -m habitat-baselines.habitat_baselines.run \
---config-name=social_nav_v2/falcon_hm3d.yaml \
-habitat_baselines.num_environments=1
-```
-
-**Mini Model:**
-```bash
-python -u -m habitat-baselines.habitat_baselines.run \
---config-name=social_nav_v2/falcon_hm3d_mini.yaml \
-habitat_baselines.num_environments=1
-```
 
 ## 📊 Evaluation Metrics
 
@@ -339,6 +325,17 @@ aiaa4220_hw3/Falcon/
         └── ...
 ```
 
+**Example Visualization locally on Minival split**
++ Videos will be saved to evaluation/falcon/hm3d/video_checkpoint15
++ Each episode will be saved to one video, with the robot's observation and a top-down map shown (with the robot's location and the humans)
+```bash
+   python -u -m habitat-baselines.habitat_baselines.run --config-name=social_nav_v2/falcon_hm3d_mini.yaml habitat_baselines.num_environments=4 \
+   habitat.dataset.data_path=data/datasets/pointnav/social-hm3d/minival/minival.json.gz \
+   habitat_baselines.eval_ckpt_path_dir=evaluation/falcon/hm3d/checkpoints/eval.pth \
+   habitat_baselines.video_dir=evaluation/falcon/hm3d/video_checkpoint15 \
+   habitat_baselines.eval.video_option=["disk"]
+```
+
 ### 3. TensorBoard Visualization (Integrated Tracking)
 
 When `video_option: ["tensorboard"]` is enabled, videos and observation frames are logged to TensorBoard (alongside training metrics like loss and SR). This is ideal for comparing episodes across training iterations or evaluating social compliance (e.g., checking if the agent avoids humans).
@@ -355,6 +352,7 @@ tensorboard --logdir=/app/Falcon/training/falcon/hm3d/tb
 # OR for evaluation logs
 tensorboard --logdir=/app/Falcon/evaluation/falcon/hm3d/tb
 ```
+
 
 ## 🚀 Submission Guidelines
 
@@ -402,14 +400,7 @@ submission.zip
 
 ### Baseline Performance
 
-The Falcon baseline achieves the following performance on the evaluation set of the homework (100 test episodes):
-
-| Model       | Split       | Success ↑ | SPL ↑  | PSC ↑  | H-Coll ↓ | Total ↑  |
-|---------------|-------------|-----------|--------|--------|-----------|--------|
-| Mini   | Minival     | 10.00     | 6.72  | 94.87  | 70.00     | 34.48 |
-| Full   | Minival     | 50.00     | 48.48  | 89.36  | 40.00     | 61.35 |
-| Mini   | Test        | 37.00     | 36.99  | 93.02  | 42.00     | 53.80 |
-| Full   | Test        | 53.00     | 48.80  | 91.20  | 41.00     | 63.20 |
+Check out the [leaderboard](https://eval.ai/web/challenges/challenge-page/2650/leaderboard) or Prof.Liang's [note](./note_junwei.md) on running the mini model.
 
 ## 🔍 Q&A
 
@@ -472,28 +463,7 @@ The action set has been refined to clearly distinguish between **stopping** *(en
 
 The two new actions (4-move_backward, 5-pause) are **optional**. Students can also continue using only actions 0-3 from **pretrained models**.
 
-### 5. How can I test my submission locally?
-
-**For Phase II**, we recommend using Docker image v0.7 for local testing:
-
-```bash
-docker run --rm -it \
-    --gpus all \
-    --runtime=nvidia \
-    -w /app/Falcon \
-    -v /path/to/your/submission:/app/Falcon/input:ro \
-    -v /path/to/your/data:/app/Falcon/data:ro \
-    zeyinggong/robosense_socialnav:v0.7
-```
-
-You can manually execute your `run.sh` inside the container to verify correctness.
-
-### 6. How long does evaluation take?
-
-- **Minival Phase**: 5–10 minutes
-- **Test Phase**: 1-2 hours (depending on number of environments used, queue length, and inference runtime)
-
-### 7. Can I modify the evaluation pipeline or import custom code?
+### 5. Can I modify the evaluation pipeline or import custom code?
 
 **Yes, we encourage flexible approaches!** You have significant freedom to modify the evaluation pipeline and import your own code. You can base your modifications on:
 
