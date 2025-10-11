@@ -7,6 +7,8 @@
 
 This is the homework 3 for AIAA 4220. We will perform a **social navigation task** on the Habitat simulator.
 
+<img src="social_nav_vis.png" alt="Social Navigation Visualization" width="100%">
+
 The assignment challenges students to develop advanced **RGBD-based perception and navigation systems** for autonomous agents operating in **dynamic, human-populated indoor environments**. The goal is to create agents that **navigate efficiently** while adhering to **social norms**—avoiding collisions and respecting personal space.
 
 ## 📋 Table of Contents
