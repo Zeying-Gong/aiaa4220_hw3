@@ -500,6 +500,11 @@ This homework follows the submission guidelines from [**IROS RoboSense Challenge
 
 ### [🎖️ **EvalAI Challenge Entry**](https://eval.ai/web/challenges/challenge-page/2650/overview)
 
+Remember to register and participate in the challenge. It is suggested that the name you use should be the Pinyin of your full name.
+
+![Registration Guide Step 1](https://raw.githubusercontent.com/Zeying-Gong/aiaa4220_hw3/main/pictures/Registration_1.png)
+
+![Registration Guide Step 2](https://raw.githubusercontent.com/Zeying-Gong/aiaa4220_hw3/main/pictures/Registration_2.png)
 
 ### Submission Format
 
