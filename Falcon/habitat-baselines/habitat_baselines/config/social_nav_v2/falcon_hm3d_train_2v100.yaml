@@ -179,9 +179,9 @@ habitat_baselines:
       rnn_type: LSTM
       num_recurrent_layers: 2
 
-      # Force distributed mode even with single process
-      # This enables proper multi-GPU utilization
-      force_distributed: False
+      # Force distributed mode for multi-GPU training
+      # This enables proper multi-GPU utilization via DD-PPO
+      force_distributed: True
 
     auxiliary_losses:
       people_counting:

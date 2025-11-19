@@ -36,17 +36,20 @@ echo "  NCCL_DEBUG=$NCCL_DEBUG"
 echo ""
 
 # Change to Falcon directory
-cd Falcon
+# cd Falcon
 
 echo "Starting distributed training with 2 GPUs..."
 echo "Config: social_nav_v2/falcon_hm3d_train_2v100.yaml"
 echo ""
 
 # Launch DD-PPO training with 2 processes (one per GPU)
-python -u -m torch.distributed.launch \
+# Using torchrun (recommended) instead of deprecated torch.distributed.launch
+torchrun \
+    --standalone \
+    --nnodes=1 \
     --nproc_per_node=2 \
     --master_port=$MASTER_PORT \
-    -m habitat-baselines.habitat_baselines.run \
+    -m habitat_baselines.run \
     --config-name=social_nav_v2/falcon_hm3d_train_2v100.yaml
 
 echo ""
