@@ -154,7 +154,8 @@ habitat_baselines:
       # Full model size for maximum performance
       hidden_size: 512
 
-      use_double_buffered_sampler: True
+      # Double buffered sampling not supported in multi-agent training
+      use_double_buffered_sampler: False
 
     ddppo:
       sync_frac: 0.6

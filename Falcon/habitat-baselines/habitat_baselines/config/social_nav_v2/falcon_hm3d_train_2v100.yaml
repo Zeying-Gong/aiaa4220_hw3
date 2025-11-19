@@ -160,8 +160,8 @@ habitat_baselines:
       # Larger model = better GPU utilization and accuracy
       hidden_size: 512
 
-      # Enable double buffered sampling for better overlap
-      use_double_buffered_sampler: True
+      # Double buffered sampling not supported in multi-agent training
+      use_double_buffered_sampler: False
 
     ddppo:
       # OPTIMIZATION 5: Enable distributed training
