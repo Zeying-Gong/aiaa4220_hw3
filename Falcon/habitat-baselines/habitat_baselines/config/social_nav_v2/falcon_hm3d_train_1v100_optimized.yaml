@@ -149,22 +149,22 @@ habitat_baselines:
       reward_window_size: 50
       use_normalized_advantage: False
 
-      # Full model size
-      hidden_size: 512
+      # Mini model size (matches pretrained_mini.pth)
+      hidden_size: 128
 
       use_double_buffered_sampler: True
 
     ddppo:
       sync_frac: 0.6
       distrib_backend: NCCL
-      pretrained_weights: pretrained_model/pretrained_habitat3.pth
+      pretrained_weights: pretrained_model/pretrained_mini.pth
       pretrained: True
       pretrained_encoder: False
       train_encoder: True
       reset_critic: True
 
-      # Full model backbone
-      backbone: resnet50
+      # Mini model backbone (matches pretrained_mini.pth)
+      backbone: resnet18
       rnn_type: LSTM
       num_recurrent_layers: 2
 

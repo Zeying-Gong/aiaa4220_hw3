@@ -154,9 +154,8 @@ habitat_baselines:
       reward_window_size: 50
       use_normalized_advantage: False
 
-      # OPTIMIZATION 4: Upgrade model size (128 -> 512)
-      # Larger model = more compute = better GPU utilization
-      hidden_size: 512
+      # Mini model size (matches pretrained_mini.pth)
+      hidden_size: 128
 
       # Enable double buffered sampling for better overlap
       use_double_buffered_sampler: True
@@ -166,16 +165,15 @@ habitat_baselines:
       sync_frac: 0.6
       distrib_backend: NCCL
 
-      # Use full model pretrained weights
-      pretrained_weights: pretrained_model/pretrained_habitat3.pth
+      # Use available pretrained weights
+      pretrained_weights: pretrained_model/pretrained_mini.pth
       pretrained: True
       pretrained_encoder: False
       train_encoder: True
       reset_critic: True
 
-      # OPTIMIZATION 6: Upgrade backbone (resnet18 -> resnet50)
-      # ResNet50 is 4x more compute-intensive than ResNet18
-      backbone: resnet50
+      # Mini model backbone (matches pretrained_mini.pth)
+      backbone: resnet18
       rnn_type: LSTM
       num_recurrent_layers: 2
 
