@@ -25,6 +25,7 @@ export NUMEXPR_NUM_THREADS=8
 export NCCL_DEBUG=INFO
 export NCCL_IB_DISABLE=1  # Disable InfiniBand if not available
 export NCCL_SOCKET_IFNAME=lo  # Use loopback for single-node
+export GLOO_SOCKET_IFNAME=lo  # GLOO backend also needs interface specified
 
 # PyTorch distributed settings
 export MASTER_ADDR=localhost
@@ -32,7 +33,8 @@ export MASTER_PORT=29500
 
 echo "Environment variables set:"
 echo "  OMP_NUM_THREADS=$OMP_NUM_THREADS"
-echo "  NCCL_DEBUG=$NCCL_DEBUG"
+echo "  NCCL_SOCKET_IFNAME=$NCCL_SOCKET_IFNAME"
+echo "  GLOO_SOCKET_IFNAME=$GLOO_SOCKET_IFNAME"
 echo ""
 
 # Change to Falcon directory
