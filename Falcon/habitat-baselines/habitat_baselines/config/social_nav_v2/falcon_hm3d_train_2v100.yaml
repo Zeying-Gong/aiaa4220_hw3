@@ -1,7 +1,9 @@
 # @package _global_
 # Optimized config for 2x V100 (32GB each) - Maximum GPU Utilization
-# Expected VRAM usage: ~28GB per GPU
+# Full Model: ResNet50 + LSTM512
+# Expected VRAM usage: 20-28GB per GPU
 # Expected speedup: 4-6x faster than mini config
+# Expected GPU utilization: 70-90% per GPU
 
 defaults:
   - /benchmark/nav/socialnav_v2: falcon_hm3d_task_for_train
@@ -154,8 +156,9 @@ habitat_baselines:
       reward_window_size: 50
       use_normalized_advantage: False
 
-      # Mini model size (matches pretrained_mini.pth)
-      hidden_size: 128
+      # OPTIMIZATION 4: Full model size for maximum performance
+      # Larger model = better GPU utilization and accuracy
+      hidden_size: 512
 
       # Enable double buffered sampling for better overlap
       use_double_buffered_sampler: True
@@ -165,15 +168,16 @@ habitat_baselines:
       sync_frac: 0.6
       distrib_backend: NCCL
 
-      # Use available pretrained weights
-      pretrained_weights: pretrained_model/pretrained_mini.pth
+      # Use full model pretrained weights
+      pretrained_weights: pretrained_model/pretrained_habitat3.pth
       pretrained: True
       pretrained_encoder: False
       train_encoder: True
       reset_critic: True
 
-      # Mini model backbone (matches pretrained_mini.pth)
-      backbone: resnet18
+      # OPTIMIZATION 6: Full model backbone (ResNet50)
+      # ResNet50 is 4x more compute-intensive than ResNet18
+      backbone: resnet50
       rnn_type: LSTM
       num_recurrent_layers: 2
 
