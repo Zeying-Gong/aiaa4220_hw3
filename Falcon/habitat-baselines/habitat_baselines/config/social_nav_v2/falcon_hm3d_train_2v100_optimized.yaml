@@ -37,14 +37,20 @@ defaults:
 habitat:
   dataset:
     split: train
+  simulator:
+    scene_dataset: "data/scene_datasets/hm3d/hm3d.scene_dataset_config.json"
+    content_scenes: ["*"]  # 使用所有145个HM3D训练场景
   environment:
     # OPTIMIZATION: Environment diversity settings to avoid overfitting
     iterator_options:
-      shuffle: True  # Shuffle episodes randomly
-      max_scene_repeat_steps: 50000  # Limit steps per scene before switching
-      max_scene_repeat_episodes: -1  # No limit on episodes per scene
-      cycle: True  # Cycle through dataset
-      seed: 42  # Random seed for reproducibility
+      shuffle: True                   # Shuffle scene groups when cycling
+      cycle: True                     # Cycle back to start when all episodes finished
+      group_by_scene: True           # Group episodes by scene for efficiency
+      max_scene_repeat_episodes: -1  # No episode limit per scene
+      max_scene_repeat_steps: 10000  # Max 10K steps per scene (标准最佳实践)
+      num_episode_sample: -1         # Use all episodes (-1 = no sampling)
+      step_repetition_range: 0.3     # 增强随机性，避免同步场景切换
+      seed: 42                       # Random seed for reproducibility
   gym:
     obs_keys:
       - agent_0_articulated_agent_jaw_rgb
