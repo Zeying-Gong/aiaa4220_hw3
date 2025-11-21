@@ -13,6 +13,8 @@ import torch
 from gym import spaces
 from torch import nn as nn
 from torch.nn import functional as F
+from torch.utils.checkpoint import checkpoint
+from torchvision import models as tv_models
 from torchvision import transforms as T
 from torchvision.transforms import functional as TF
 
@@ -67,7 +69,7 @@ class PointNavResNetPolicy(NetPolicy):
         """
         Keyword arguments:
         rnn_type: RNN layer type; one of ["GRU", "LSTM"]
-        backbone: Visual encoder backbone; one of ["resnet18", "resnet50", "resneXt50", "se_resnet50", "se_resneXt50", "se_resneXt101", "resnet50_clip_avgpool", "resnet50_clip_attnpool"]
+        backbone: Visual encoder backbone; one of ["resnet18", "resnet50", "resneXt50", "se_resnet50", "se_resneXt50", "se_resneXt101", "resnet50_clip_avgpool", "resnet50_clip_attnpool", "dual_stream_fpn"]
         """
 
         assert backbone in [
@@ -79,6 +81,7 @@ class PointNavResNetPolicy(NetPolicy):
             "se_resneXt101",
             "resnet50_clip_avgpool",
             "resnet50_clip_attnpool",
+            "dual_stream_fpn",
         ], f"{backbone} backbone is not recognized."
 
         if policy_config is not None:
@@ -273,6 +276,244 @@ class ResNetEncoder(nn.Module):
         x = self.backbone(x)
         x = self.compression(x)
         return x
+
+
+class DualStreamFpnAttentionEncoder(nn.Module):
+    def __init__(self, output_dim: int, pretrained: bool = False):
+        super().__init__()
+
+        rgb_backbone = tv_models.resnet50(pretrained=pretrained)
+        depth_backbone = tv_models.resnet50(pretrained=pretrained)
+
+        depth_conv1 = depth_backbone.conv1
+        depth_backbone.conv1 = nn.Conv2d(
+            1,
+            depth_conv1.out_channels,
+            kernel_size=depth_conv1.kernel_size,
+            stride=depth_conv1.stride,
+            padding=depth_conv1.padding,
+            bias=depth_conv1.bias is not None,
+        )
+        with torch.no_grad():
+            depth_backbone.conv1.weight.copy_(
+                depth_conv1.weight.mean(dim=1, keepdim=True)
+            )
+
+        self.rgb_stem = nn.Sequential(
+            rgb_backbone.conv1,
+            rgb_backbone.bn1,
+            rgb_backbone.relu,
+            rgb_backbone.maxpool,
+        )
+        self.rgb_layer1 = rgb_backbone.layer1
+        self.rgb_layer2 = rgb_backbone.layer2
+        self.rgb_layer3 = rgb_backbone.layer3
+        self.rgb_layer4 = rgb_backbone.layer4
+
+        self.depth_stem = nn.Sequential(
+            depth_backbone.conv1,
+            depth_backbone.bn1,
+            depth_backbone.relu,
+            depth_backbone.maxpool,
+        )
+        self.depth_layer1 = depth_backbone.layer1
+        self.depth_layer2 = depth_backbone.layer2
+        self.depth_layer3 = depth_backbone.layer3
+        self.depth_layer4 = depth_backbone.layer4
+
+        fpn_channels = 256
+        self.rgb_lateral4 = nn.Conv2d(2048, fpn_channels, kernel_size=1)
+        self.rgb_lateral3 = nn.Conv2d(1024, fpn_channels, kernel_size=1)
+        self.rgb_lateral2 = nn.Conv2d(512, fpn_channels, kernel_size=1)
+        self.rgb_lateral1 = nn.Conv2d(256, fpn_channels, kernel_size=1)
+
+        self.rgb_smooth4 = nn.Conv2d(
+            fpn_channels, fpn_channels, kernel_size=3, padding=1
+        )
+        self.rgb_smooth3 = nn.Conv2d(
+            fpn_channels, fpn_channels, kernel_size=3, padding=1
+        )
+        self.rgb_smooth2 = nn.Conv2d(
+            fpn_channels, fpn_channels, kernel_size=3, padding=1
+        )
+        self.rgb_smooth1 = nn.Conv2d(
+            fpn_channels, fpn_channels, kernel_size=3, padding=1
+        )
+
+        self.avgpool = nn.AdaptiveAvgPool2d(1)
+
+        fusion_input_dim = fpn_channels * 4 + 2048
+        self.fc_compress = nn.Linear(fusion_input_dim, 1024)
+        self.se_mlp = nn.Sequential(
+            nn.Linear(1024, 256),
+            nn.ReLU(True),
+            nn.Linear(256, 1024),
+            nn.Sigmoid(),
+        )
+        self.fc_out = nn.Linear(1024, output_dim)
+
+    def _upsample_add(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        x_upsampled = F.interpolate(
+            x, size=y.shape[-2:], mode="nearest"
+        )
+        return x_upsampled + y
+
+    def _forward_impl(
+        self, rgb: torch.Tensor, depth: torch.Tensor
+    ) -> torch.Tensor:
+        x = self.rgb_stem(rgb)
+        c2 = self.rgb_layer1(x)
+        c3 = self.rgb_layer2(c2)
+        c4 = self.rgb_layer3(c3)
+        c5 = self.rgb_layer4(c4)
+
+        p5 = self.rgb_lateral4(c5)
+        p4 = self._upsample_add(p5, self.rgb_lateral3(c4))
+        p3 = self._upsample_add(p4, self.rgb_lateral2(c3))
+        p2 = self._upsample_add(p3, self.rgb_lateral1(c2))
+
+        p5 = self.rgb_smooth4(p5)
+        p4 = self.rgb_smooth3(p4)
+        p3 = self.rgb_smooth2(p3)
+        p2 = self.rgb_smooth1(p2)
+
+        def pool_flatten(feat: torch.Tensor) -> torch.Tensor:
+            pooled = self.avgpool(feat)
+            return pooled.view(pooled.size(0), -1)
+
+        rgb_vec = torch.cat(
+            [
+                pool_flatten(p2),
+                pool_flatten(p3),
+                pool_flatten(p4),
+                pool_flatten(p5),
+            ],
+            dim=1,
+        )
+
+        d = self.depth_stem(depth)
+        d2 = self.depth_layer1(d)
+        d3 = self.depth_layer2(d2)
+        d4 = self.depth_layer3(d3)
+        d5 = self.depth_layer4(d4)
+        depth_vec = self.avgpool(d5).view(d5.size(0), -1)
+
+        fused = torch.cat([rgb_vec, depth_vec], dim=1)
+        z = self.fc_compress(fused)
+        gate = self.se_mlp(z)
+
+        # SE Attention Regularization: prevent gate collapse
+        if self.training:
+            gate_mean = gate.mean()
+            gate_std = gate.std()
+            # If gate variance is too low, add small noise to prevent collapse
+            if gate_std < 0.1:
+                noise = torch.randn_like(gate) * 0.05
+                gate = torch.clamp(gate + noise, 0.0, 1.0)
+
+        z = z * gate
+        out = self.fc_out(z)
+        return out
+
+    def forward(
+        self, rgb: torch.Tensor, depth: torch.Tensor
+    ) -> torch.Tensor:
+        # Use gradient checkpointing during training to reduce memory
+        if self.training:
+            # use_reentrant=False avoids requiring inputs with requires_grad=True
+            return checkpoint(self._forward_impl, rgb, depth, use_reentrant=False)
+        return self._forward_impl(rgb, depth)
+
+
+class DualStreamEncoderWrapper(nn.Module):
+    def __init__(
+        self,
+        observation_space: spaces.Dict,
+        output_dim: int,
+        normalize_visual_inputs: bool = False,
+    ):
+        super().__init__()
+
+        self.rgb_key: Optional[str] = None
+        self.depth_key: Optional[str] = None
+
+        # Match both de-prefixed and prefixed keys, but in this
+        # config observation_space already has de-prefixed keys
+        # like "articulated_agent_jaw_rgb"/"_depth".
+        for k, v in observation_space.spaces.items():
+            if len(v.shape) <= 1:
+                continue
+            if self.rgb_key is None and (
+                k == "articulated_agent_jaw_rgb"
+                or k == "agent_0_articulated_agent_jaw_rgb"
+            ):
+                self.rgb_key = k
+            if self.depth_key is None and (
+                k == "articulated_agent_jaw_depth"
+                or k == "agent_0_articulated_agent_jaw_depth"
+            ):
+                self.depth_key = k
+
+        self._n_input_channels = 0
+        if self.rgb_key is not None:
+            self._n_input_channels += observation_space.spaces[
+                self.rgb_key
+            ].shape[2]
+        if self.depth_key is not None:
+            self._n_input_channels += observation_space.spaces[
+                self.depth_key
+            ].shape[2]
+
+        if normalize_visual_inputs and self._n_input_channels > 0:
+            self.running_mean_and_var = RunningMeanAndVar(
+                self._n_input_channels
+            )
+        else:
+            self.running_mean_and_var = nn.Sequential()
+
+        self.encoder = DualStreamFpnAttentionEncoder(output_dim=output_dim, pretrained=True)
+        self.output_shape = (output_dim,)
+
+    @property
+    def is_blind(self) -> bool:
+        return self._n_input_channels == 0
+
+    def forward(
+        self, observations: Dict[str, torch.Tensor]
+    ) -> Optional[torch.Tensor]:
+        if self.is_blind:
+            return None
+        rgb = None
+        depth = None
+
+        if self.rgb_key is not None:
+            rgb = observations[self.rgb_key].permute(0, 3, 1, 2).float()
+
+        if self.depth_key is not None:
+            depth_obs = observations[self.depth_key]
+            depth = depth_obs.permute(0, 3, 1, 2).float()
+
+        if rgb is None and depth is None:
+            return None
+
+        # If only one modality is present, synthesize the other to keep the
+        # dual-stream encoder interface simple.
+        if rgb is None and depth is not None:
+            rgb = depth.repeat(1, 3, 1, 1)
+        if depth is None and rgb is not None:
+            depth = rgb[:, :1]
+
+        # If both streams exist but spatial sizes differ, resize depth to match rgb
+        if rgb.shape[-2:] != depth.shape[-2:]:
+            depth = F.interpolate(
+                depth, size=rgb.shape[-2:], mode="bilinear", align_corners=False
+            )
+
+        # Downsample only RGB to control memory, keep depth resolution
+        rgb = F.avg_pool2d(rgb, 2)
+
+        # Feed two separate streams into the dual-stream encoder
+        return self.encoder(rgb, depth)
 
 
 class ResNetCLIPEncoder(nn.Module):
@@ -572,6 +813,16 @@ class PointNavResNetNet(Net):
                     nn.Linear(
                         self.visual_encoder.output_shape[0], hidden_size
                     ),
+                    nn.ReLU(True),
+                )
+        elif backbone == "dual_stream_fpn":
+            self.visual_encoder = DualStreamEncoderWrapper(
+                observation_space=use_obs_space,
+                output_dim=hidden_size,
+                normalize_visual_inputs=normalize_visual_inputs,
+            )
+            if not self.visual_encoder.is_blind:
+                self.visual_fc = nn.Sequential(
                     nn.ReLU(True),
                 )
         else:

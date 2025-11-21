@@ -1,0 +1,1 @@
+sudo docker run --name homework -it --gpus all --network host   --runtime=nvidia   --entrypoint /bin/bash   -w /app/Falcon   -v /4220/P3/data/:/app/Falcon/data   -v /4220/P3/aiaa4220_hw3/Falcon/:/app/Falcon   zeyinggong/robosense_socialnav:v0.7

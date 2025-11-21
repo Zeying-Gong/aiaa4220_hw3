@@ -13,6 +13,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch import Tensor
+from torch.cuda.amp import GradScaler, autocast
 
 from habitat import logger
 from habitat.utils import profiling_wrapper
@@ -56,6 +57,7 @@ class PPO(nn.Module, Updater):
             aux_tasks=aux_tasks,
             aux_names=aux_names,
             aux_cfg=aux_cfg,
+            use_amp=config.use_amp,
         )
 
     def __init__(
@@ -77,6 +79,7 @@ class PPO(nn.Module, Updater):
         aux_tasks=[],
         aux_names=[],
         aux_cfg=None,
+        use_amp: bool = False,
     ) -> None:
         super().__init__()
 
@@ -89,6 +92,7 @@ class PPO(nn.Module, Updater):
         self.value_loss_coef = value_loss_coef
         self.entropy_coef = entropy_coef
         self.aux_loss_coef = aux_loss_coef   ## added
+        self.smoothness_loss_coef = 0.01  # Weight for action smoothness loss
         self.max_grad_norm = max_grad_norm
         self.use_clipped_value_loss = use_clipped_value_loss
 
@@ -118,6 +122,14 @@ class PPO(nn.Module, Updater):
             self._aux_names = aux_names
 
         self.use_normalized_advantage = use_normalized_advantage
+
+        # AMP support
+        self.use_amp: bool = bool(use_amp and torch.cuda.is_available())
+        self.grad_scaler: Optional[GradScaler]
+        if self.use_amp:
+            self.grad_scaler = GradScaler()
+        else:
+            self.grad_scaler = None
         self.optimizer = self._create_optimizer(lr, eps, self._aux_tasks)
 
         self.non_ac_params = [
@@ -181,6 +193,24 @@ class PPO(nn.Module, Updater):
     def _compute_var_mean(x):
         return torch.var_mean(x)
 
+    def _compute_smoothness_loss(
+        self,
+        current_action_log_probs: torch.Tensor,
+        prev_action_log_probs: Optional[torch.Tensor],
+        masks: torch.Tensor
+    ) -> Optional[torch.Tensor]:
+        """
+        Computes action smoothness loss to encourage consistent action distributions.
+        """
+        if prev_action_log_probs is None:
+            return None
+        valid_mask = (masks.squeeze(-1) > 0)
+        if valid_mask.sum() == 0:
+            return None
+        curr_valid = current_action_log_probs[valid_mask]
+        prev_valid = prev_action_log_probs[valid_mask].detach()
+        return F.mse_loss(curr_valid, prev_valid)
+
     def _set_grads_to_none(self):
         for pg in self.optimizer.param_groups:
             for p in pg["params"]:
@@ -202,39 +232,41 @@ class PPO(nn.Module, Updater):
 
         self._set_grads_to_none()
         aux_dist_entropy = None
-        if isinstance(self.actor_critic, AttentiveBeliefPolicy):
-            (
-                values,
-                action_log_probs,
-                dist_entropy,
-                final_rnn_state,
-                rnn_features,
-                individual_rnn_features,
-                aux_dist_entropy,
-                aux_weights,
-            ) = self._evaluate_actions(
-                batch["observations"],
-                batch["recurrent_hidden_states"],
-                batch["prev_actions"],
-                batch["masks"],
-                batch["actions"],
-                batch.get("rnn_build_seq_info", None),
-            )
-        else:
-            (
-                values,
-                action_log_probs,
-                dist_entropy,
-                final_rnn_state,
-                aux_loss_res,
-            ) = self._evaluate_actions(
-                batch["observations"],
-                batch["recurrent_hidden_states"],
-                batch["prev_actions"],
-                batch["masks"],
-                batch["actions"],
-                batch.get("rnn_build_seq_info", None),
-            )
+        # Forward and loss computation (optionally under autocast)
+        with autocast(enabled=self.use_amp):
+            if isinstance(self.actor_critic, AttentiveBeliefPolicy):
+                (
+                    values,
+                    action_log_probs,
+                    dist_entropy,
+                    final_rnn_state,
+                    rnn_features,
+                    individual_rnn_features,
+                    aux_dist_entropy,
+                    aux_weights,
+                ) = self._evaluate_actions(
+                    batch["observations"],
+                    batch["recurrent_hidden_states"],
+                    batch["prev_actions"],
+                    batch["masks"],
+                    batch["actions"],
+                    batch.get("rnn_build_seq_info", None),
+                )
+            else:
+                (
+                    values,
+                    action_log_probs,
+                    dist_entropy,
+                    final_rnn_state,
+                    aux_loss_res,
+                ) = self._evaluate_actions(
+                    batch["observations"],
+                    batch["recurrent_hidden_states"],
+                    batch["prev_actions"],
+                    batch["masks"],
+                    batch["actions"],
+                    batch.get("rnn_build_seq_info", None),
+                )
 
         ratio = torch.exp(action_log_probs - batch["action_log_probs"])
 
@@ -310,15 +342,36 @@ class PPO(nn.Module, Updater):
         if len(self._aux_tasks) == 0:
             all_losses.extend(v["loss"] for v in aux_loss_res.values())
 
+        smoothness_loss = self._compute_smoothness_loss(
+            action_log_probs,
+            batch.get("prev_action_log_probs", None),
+            batch["masks"]
+        )
+        if smoothness_loss is not None:
+            all_losses.append(self.smoothness_loss_coef * smoothness_loss)
+
         total_loss = torch.stack(all_losses).sum()
 
-        total_loss = self.before_backward(total_loss)
-        total_loss.backward()
-        self.after_backward(total_loss)
+        # Backward + step with optional AMP scaling
+        if self.use_amp and self.grad_scaler is not None:
+            total_loss = self.before_backward(total_loss)
+            self.grad_scaler.scale(total_loss).backward()
+            self.after_backward(total_loss)
 
-        grad_norm = self.before_step()
-        self.optimizer.step()
-        self.after_step()
+            # Unscale before gradient clipping / DDP reduction
+            self.grad_scaler.unscale_(self.optimizer)
+            grad_norm = self.before_step()
+            self.grad_scaler.step(self.optimizer)
+            self.grad_scaler.update()
+            self.after_step()
+        else:
+            total_loss = self.before_backward(total_loss)
+            total_loss.backward()
+            self.after_backward(total_loss)
+
+            grad_norm = self.before_step()
+            self.optimizer.step()
+            self.after_step()
 
         with inference_mode():
             if "is_coeffs" in batch:
@@ -329,6 +382,13 @@ class PPO(nn.Module, Updater):
             learner_metrics["value_loss"].append(value_loss)
             learner_metrics["action_loss"].append(action_loss)
             learner_metrics["dist_entropy"].append(dist_entropy)
+            if smoothness_loss is not None:
+                learner_metrics["smoothness_loss"].append(smoothness_loss.detach())
+
+            # Record learning rate
+            if self.optimizer is not None:
+                current_lr = self.optimizer.param_groups[0]['lr']
+                learner_metrics["lr"].append(current_lr)
 
             if epoch == (self.ppo_epoch - 1):
                 learner_metrics["ppo_fraction_clipped"].append(

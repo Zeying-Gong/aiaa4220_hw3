@@ -298,6 +298,8 @@ class PPOConfig(HabitatBaselinesBaseConfig):
     use_gae: bool = True
     use_linear_lr_decay: bool = False
     use_linear_clip_decay: bool = False
+    lr_schedule_type: str = "linear"  # "linear" or "cosine"
+    lr_schedule_params: Dict[str, Any] = field(default_factory=dict)  # Params for cosine schedule
     gamma: float = 0.99
     tau: float = 0.95
     reward_window_size: int = 50
@@ -311,6 +313,8 @@ class PPOConfig(HabitatBaselinesBaseConfig):
     # policy inference time during rollout generation
     # Not that this does not change the memory requirements
     use_double_buffered_sampler: bool = False
+    # Optional: enable mixed precision training via torch.cuda.amp
+    use_amp: bool = False
 
 
 @dataclass

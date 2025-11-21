@@ -65,6 +65,9 @@ class RolloutStorage(Storage):
         self.buffers["action_log_probs"] = torch.zeros(
             numsteps + 1, num_envs, 1
         )
+        self.buffers["prev_action_log_probs"] = torch.zeros(
+            numsteps + 1, num_envs, 1
+        )
 
         if action_shape is None:
             action_shape = action_space.shape
@@ -129,6 +132,7 @@ class RolloutStorage(Storage):
             observations=next_observations,
             recurrent_hidden_states=next_recurrent_hidden_states,
             prev_actions=actions,
+            prev_action_log_probs=action_log_probs,
             masks=next_masks,
         )
 

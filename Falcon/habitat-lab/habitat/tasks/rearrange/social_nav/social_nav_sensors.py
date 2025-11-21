@@ -168,13 +168,26 @@ class SocialNavReward(RearrangeReward):
         if self._prev_dist < 0:
             social_nav_reward = 0.0
 
-        # Componet 5: Collision detection for two agents
+        # Component 5: Collision detection for two agents
         did_collide = task.measurements.measures[
             DidAgentsCollide._get_uuid()
         ].get_metric()
         if did_collide:
             task.should_end = True
-            social_nav_reward -= self._collide_penalty
+
+            # Adaptive collision penalty: k1*t + k2*sin(pi*t)
+            # t = progress through training (0 to 1)
+            # This creates a penalty that increases gradually with occasional stronger emphasis
+            import math
+            episode_count = task._sim.habitat_config.habitat.environment.iterator_options.get('episode_count', 0)
+            max_episodes = task._sim.habitat_config.habitat.environment.iterator_options.get('max_scene_repeat_episodes', 10000)
+            progress = min(episode_count / max_episodes, 1.0) if max_episodes > 0 else 0.0
+
+            # k1: linear growth factor, k2: sinusoidal amplitude
+            k1 = 3.0  # Penalty grows from 10.0 to 13.0 over training
+            k2 = 1.5  # Sinusoidal variation ±1.5
+            adaptive_penalty = self._collide_penalty * (1.0 + k1 * progress + k2 * math.sin(math.pi * progress))
+            social_nav_reward -= adaptive_penalty
 
         self._metric += social_nav_reward
 

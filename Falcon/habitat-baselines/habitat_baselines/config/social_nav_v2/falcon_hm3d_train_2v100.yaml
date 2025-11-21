@@ -33,7 +33,7 @@ habitat:
     split: train
   gym:
     obs_keys:
-      # - agent_0_articulated_agent_jaw_rgb # use it if add RGB camera
+      - agent_0_articulated_agent_jaw_rgb
       - agent_0_articulated_agent_jaw_depth
       - agent_0_pointgoal_with_gps_compass
       - agent_0_localization_sensor
@@ -98,16 +98,15 @@ habitat_baselines:
   verbose: True
   trainer_name: "falcon_trainer"
   torch_gpu_id: 0
-  tensorboard_dir: "evaluation/falcon/hm3d_2v100/tb"
-  video_dir: "evaluation/falcon/hm3d_2v100/video"
+  tensorboard_dir: "evaluation/falcon/hm3d_2v100_dual/tb"
+  video_dir: "evaluation/falcon/hm3d_2v100_dual/video"
   test_episode_count: -1
 
-  # OPTIMIZATION 1: Increase parallel environments (4 -> 16)
-  # More environments = better GPU utilization
-  # 16 envs * 2 GPUs = 32 total parallel simulations
-  num_environments: 16
+  # OPTIMIZATION 1 (adjusted): parallel environments
+  # Reduce from 16 to 8 to lower memory footprint
+  num_environments: 8
 
-  checkpoint_folder: "evaluation/falcon/hm3d_2v100/checkpoints"
+  checkpoint_folder: "evaluation/falcon/hm3d_2v100_dual/checkpoints"
   num_updates: -1
   total_num_steps: 800000
   log_interval: 10
@@ -138,16 +137,16 @@ habitat_baselines:
       agent_0:
         name: "PointNavResNetPolicy"
     ppo:
-      # OPTIMIZATION 3: Increase batch size for better GPU utilization
       clip_param: 0.2
-      ppo_epoch: 4  # Increased from 2 to 4 for more gradient updates
-      num_mini_batch: 4  # Increased from 2 to 4 for larger effective batch size
+      ppo_epoch: 2
+      num_mini_batch: 4
+      use_amp: True
       value_loss_coef: 0.5
       entropy_coef: 0.01
       lr: 2.0e-4  # Slightly increased for larger batch size
       eps: 1e-5
       max_grad_norm: 0.2
-      num_steps: 128
+      num_steps: 64
       use_gae: True
       gamma: 0.99
       tau: 0.95
@@ -175,9 +174,8 @@ habitat_baselines:
       train_encoder: True
       reset_critic: True
 
-      # OPTIMIZATION 6: Full model backbone (ResNet50)
-      # ResNet50 is 4x more compute-intensive than ResNet18
-      backbone: resnet50
+      # OPTIMIZATION 6: Dual-stream backbone (RGB+Depth, ResNet50-FPN)
+      backbone: dual_stream_fpn
       rnn_type: LSTM
       num_recurrent_layers: 2
 

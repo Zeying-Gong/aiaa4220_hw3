@@ -4,7 +4,7 @@ import gym.spaces as spaces
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.optim.lr_scheduler import LambdaLR
+from torch.optim.lr_scheduler import LambdaLR, CosineAnnealingLR
 
 from habitat import logger
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -89,10 +89,22 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         if self._updater.optimizer is None:
             self._lr_scheduler = None
         else:
-            self._lr_scheduler = LambdaLR(
-                optimizer=self._updater.optimizer,
-                lr_lambda=lambda _: lr_schedule_fn(self._percent_done_fn()),
-            )
+            # Check if cosine schedule is requested
+            lr_schedule_type = getattr(self._ppo_cfg, 'lr_schedule_type', 'linear')
+            if lr_schedule_type == 'cosine':
+                # Use Cosine Annealing Learning Rate
+                lr_params = self._ppo_cfg.get('lr_schedule_params', {})
+                self._lr_scheduler = CosineAnnealingLR(
+                    self._updater.optimizer,
+                    T_max=lr_params.get('T_max', 1066),
+                    eta_min=lr_params.get('eta_min', 1e-5)
+                )
+            else:
+                # Use original Linear LR Decay
+                self._lr_scheduler = LambdaLR(
+                    optimizer=self._updater.optimizer,
+                    lr_lambda=lambda _: lr_schedule_fn(self._percent_done_fn()),
+                )
         if resume_state is not None:
             self._updater.load_state_dict(resume_state["state_dict"])
             self._updater.load_state_dict(
@@ -215,25 +227,31 @@ class SingleAgentAccessMgr(AgentAccessMgr):
                 filtered_pretrained_state_dict = {}
                 for k, v in pretrained_state["state_dict"].items():
                     if k.startswith("actor_critic."):
-                        model_key = k[len("actor_critic."):]
+                        model_key = k[len("actor_critic.") :]
                     else:
                         model_key = k
-                    if model_key in model_state_dict:
+                    if (
+                        model_key in model_state_dict
+                        and model_state_dict[model_key].shape == v.shape
+                    ):
                         filtered_pretrained_state_dict[model_key] = v
                 model_state_dict.update(filtered_pretrained_state_dict)
-                actor_critic.load_state_dict(model_state_dict, strict=False)        
+                actor_critic.load_state_dict(model_state_dict, strict=False)
             elif 0 in pretrained_state and "state_dict" in pretrained_state[0]:
                 model_state_dict = actor_critic.state_dict()
                 filtered_pretrained_state_dict = {}
                 for k, v in pretrained_state[0]["state_dict"].items():
                     if k.startswith("actor_critic."):
-                        model_key = k[len("actor_critic."):]
+                        model_key = k[len("actor_critic.") :]
                     else:
                         model_key = k
-                    if model_key in model_state_dict:
+                    if (
+                        model_key in model_state_dict
+                        and model_state_dict[model_key].shape == v.shape
+                    ):
                         filtered_pretrained_state_dict[model_key] = v
                 model_state_dict.update(filtered_pretrained_state_dict)
-                actor_critic.load_state_dict(model_state_dict, strict=False)            
+                actor_critic.load_state_dict(model_state_dict, strict=False)
             else:
                 actor_critic.load_state_dict(
                         { 
@@ -307,8 +325,10 @@ class SingleAgentAccessMgr(AgentAccessMgr):
                 self._lr_scheduler.load_state_dict(state["lr_sched_state"])
 
     def after_update(self):
+        lr_schedule_type = getattr(self._ppo_cfg, 'lr_schedule_type', 'linear')
+        # For cosine, always step. For linear, only if use_linear_lr_decay is True
         if (
-            self._ppo_cfg.use_linear_lr_decay
+            (lr_schedule_type == 'cosine' or self._ppo_cfg.use_linear_lr_decay)
             and self._lr_scheduler is not None
         ):
             self._lr_scheduler.step()  # type: ignore
